@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "customer_service_email_classification"
+  site-url: "https://cah-jake-bergren.github.io/customer_service_email_classification"
+  description: "Classifying customer service emails"
+  repo-branch: main
+  repo-url: "https://github.com/cah-jake-bergren/customer_service_email_classification"
