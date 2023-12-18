@@ -2,20 +2,26 @@
 
 # %% auto 0
 __all__ = ['SUMMARIZE_PROMPT_PREFIX', 'SUMMARIZE_PROMPT_STR', 'SUMMARIZE_PROMPT', 'BISON_MAXIMUM_INPUT_TOKENS',
-           'CONTEXT_TOKEN_LIMIT', 'EMAIL_SUBJECT_PREFIX', 'EMAIL_BODY_PREFIX', 'PREFIX_LEN', 'make_document_from_email',
-           'split_training_instance_for_summary', 'split_training_instances', 'get_email_document_summary']
+           'CONTEXT_TOKEN_LIMIT', 'EMAIL_SUBJECT_PREFIX', 'EMAIL_BODY_PREFIX', 'PREFIX_LEN',
+           'SUMMARIZATION_PROMPT_FILE_NAME', 'SUMMARIZATION_METADATA_FILE_NAME', 'SUMMARIZATION_RESULT_PREFIX',
+           'make_document_from_instance', 'prepare_summarization_prompt', 'prepare_batch_summarization_files',
+           'summarize_prompts', 'load_batch_prediction_results']
 
 # %% ../nbs/02_process.ipynb 2
-from typing import List, Dict
+from typing import List, Dict, Any, Tuple, Iterable
 from itertools import chain, islice
 
-from .schema import batch_predict, predict
-from .load import get_training_instances, TrainingInstance
+from .schema import batch_predict, predict, get_storage_client, \
+    get_model, DEFAULT_PREDICT_PARAMS
+from .load import get_training_instances, TrainingInstance, \
+    PROJECT_BUCKET, WRITE_PREFIX, get_idx, get_document_batches
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
+from langchain.llms import VertexAI
 from tqdm.auto import tqdm
+from google.cloud.aiplatform import BatchPredictionJob
 
 # %% ../nbs/02_process.ipynb 8
 SUMMARIZE_PROMPT_PREFIX = """You are a customer service representative.
@@ -38,58 +44,78 @@ EMAIL_BODY_PREFIX = "--EMAIL BODY--"
 PREFIX_LEN = len(EMAIL_SUBJECT_PREFIX + EMAIL_BODY_PREFIX) + len("\n"*4)
 
 
-def make_document_from_email(
-        body: str, 
-        subject: str, 
-        metadata: Dict[str, str]
+def make_document_from_instance(
+        instance: TrainingInstance
         ) -> Document:
+    metadata = instance.metadata.copy()
+    metadata['idx'] = instance.idx
     return Document(
         page_content="\n".join([
             EMAIL_SUBJECT_PREFIX,
-            subject,
+            instance.email_subject,
             EMAIL_BODY_PREFIX,
-            body]),
+            instance.email_body]),
         metadata=metadata
     )
 
+# %% ../nbs/02_process.ipynb 17
+def prepare_summarization_prompt(document: Document) -> Tuple[Dict[str, str], Dict[str, Any]]:
+    prompt = {'prompt': SUMMARIZE_PROMPT.format(context=document.page_content)}
+    return prompt, document.metadata
 
-def split_training_instance_for_summary(
-    training_instance: TrainingInstance,
-    character_limit: int = CONTEXT_TOKEN_LIMIT
-    ) -> List[Document]:
-    subject_len = len(training_instance.email_subject)
-    body_len = len(training_instance.email_body)
-    if (subject_len + body_len + PREFIX_LEN) > character_limit:
-        body_limit = character_limit - subject_len - PREFIX_LEN
-        body_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=body_limit)
-        body_texts = body_splitter.split_text(training_instance.email_body)
-    else:
-        body_texts = [training_instance.email_body]
-    metadata = training_instance.metadata
-    metadata['idx'] = training_instance.idx
-    metadata['label'] = training_instance.label
-    # Gather split instances as documents
-    split_instances = []
-    for i, body in enumerate(body_texts):
-        i_metadata = metadata.copy()
-        i_metadata['idx_chunk'] = i
-        i_document = make_document_from_email(
-            body,
-            subject=training_instance.email_subject,
-            metadata=i_metadata
-        )
-        split_instances.append(i_document)
-    return split_instances
+# %% ../nbs/02_process.ipynb 34
+SUMMARIZATION_PROMPT_FILE_NAME = "summarization_prompts.jsonl"
+SUMMARIZATION_METADATA_FILE_NAME = "summarization_metadata.jsonl"
 
 
-def split_training_instances(instances: List[TrainingInstance]) -> List[Document]:
-    return list(chain.from_iterable(map(split_training_instance_for_summary, instances)))
+def prepare_batch_summarization_files(
+        loader: Iterable[TrainingInstance],
+        bucket_name: str = PROJECT_BUCKET,
+        use_pbar: bool = False,
+        pbar_size: int = 10000,
+        prefix: str = WRITE_PREFIX):
+    client = get_storage_client()
+    bucket = client.bucket(bucket_name=bucket_name)
+    prompt_blob_name = f"{prefix}/{SUMMARIZATION_PROMPT_FILE_NAME}"
+    metadata_blob_name = f"{prefix}/{SUMMARIZATION_METADATA_FILE_NAME}"
+    prompt_blob = bucket.blob(blob_name=prompt_blob_name)
+    metadata_blob = bucket.blob(blob_name=metadata_blob_name)
+    if use_pbar:
+        pbar = tqdm(total=pbar_size, ncols=80, leave=False)
+    with metadata_blob.open("w") as metadata_f:
+        with prompt_blob.open("w") as prompt_f:
+            for instance in loader:
+                document = make_document_from_instance(instance)
+                prompt, metadata = prepare_summarization_prompt(document)
+                # Write prompt to JSONL file in GCS, write metadat to similar file
+                json.dump(prompt, prompt_f)
+                prompt_f.write("\n")
+                json.dump(metadata, metadata_f)
+                metadata_f.write("\n")
+                if use_pbar:
+                    pbar.update(1)
+    if use_pbar:
+        pbar.close()
 
-# %% ../nbs/02_process.ipynb 16
-def get_email_document_summary(document: Document) -> str:
-    prompt = SUMMARIZE_PROMPT.format(
-        context=document.page_content
-    )
-    summary_response = predict(prompt)
-    return summary_response.text
+# %% ../nbs/02_process.ipynb 37
+SUMMARIZATION_RESULT_PREFIX = "summarization"
+
+
+def summarize_prompts(
+        file_prefix: str = WRITE_PREFIX,
+        file_name: str = SUMMARIZATION_PROMPT_FILE_NAME,
+        bucket_name: str = PROJECT_BUCKET,
+        params: Dict[str, Any] = DEFAULT_PREDICT_PARAMS
+        ) -> BatchPredictionJob:
+    dataset = f"gs://{bucket_name}/{file_prefix}/{file_name}"
+    destination_url_prefix = f"gs://{bucket_name}/{file_prefix}/{SUMMARIZATION_RESULT_PREFIX}"
+    model = get_model()
+    return model.batch_predict(
+        dataset=dataset,
+        destination_uri_prefix=destination_url_prefix,
+        # Optional:
+        model_parameters=params)
+
+# %% ../nbs/02_process.ipynb 39
+def load_batch_prediction_results():
+    pass
