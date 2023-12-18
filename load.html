@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Load documents from GCS">
+
+<title>classifier - load</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="classifier - load">
+<meta property="og:description" content="Load documents from GCS">
+<meta property="og:site-name" content="classifier">
+<meta name="twitter:title" content="classifier - load">
+<meta name="twitter:description" content="Load documents from GCS">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">classifier</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools ms-auto">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+      <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./load.html">load</a></li></ol></nav>
+      <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+      </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">classifier</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./schema.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">schema</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./load.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">load</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./process.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">process</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./chroma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">chroma</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./predict.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">predict</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluate.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">evaluate</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#get_possible_labels" id="toc-get_possible_labels" class="nav-link active" data-scroll-target="#get_possible_labels">get_possible_labels</a></li>
+  <li><a href="#training_instance_from_row" id="toc-training_instance_from_row" class="nav-link" data-scroll-target="#training_instance_from_row">training_instance_from_row</a></li>
+  <li><a href="#traininginstance" id="toc-traininginstance" class="nav-link" data-scroll-target="#traininginstance">TrainingInstance</a></li>
+  <li><a href="#get-a-training-and-test-sample-remove-outliers" id="toc-get-a-training-and-test-sample-remove-outliers" class="nav-link" data-scroll-target="#get-a-training-and-test-sample-remove-outliers">Get a “training” and “test” sample, remove outliers</a>
+  <ul class="collapse">
+  <li><a href="#outlier-removal" id="toc-outlier-removal" class="nav-link" data-scroll-target="#outlier-removal">Outlier removal</a></li>
+  <li><a href="#email_small_enough" id="toc-email_small_enough" class="nav-link" data-scroll-target="#email_small_enough">email_small_enough</a></li>
+  <li><a href="#train-and-test-set" id="toc-train-and-test-set" class="nav-link" data-scroll-target="#train-and-test-set">Train and test set</a></li>
+  <li><a href="#get_train_test_idx" id="toc-get_train_test_idx" class="nav-link" data-scroll-target="#get_train_test_idx">get_train_test_idx</a></li>
+  <li><a href="#write_idx" id="toc-write_idx" class="nav-link" data-scroll-target="#write_idx">write_idx</a></li>
+  <li><a href="#get_idx" id="toc-get_idx" class="nav-link" data-scroll-target="#get_idx">get_idx</a></li>
+  <li><a href="#get_training_instances" id="toc-get_training_instances" class="nav-link" data-scroll-target="#get_training_instances">get_training_instances</a></li>
+  <li><a href="#get_document_batches" id="toc-get_document_batches" class="nav-link" data-scroll-target="#get_document_batches">get_document_batches</a></li>
+  </ul></li>
+  <li><a href="#export" id="toc-export" class="nav-link" data-scroll-target="#export">Export</a></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/cah-jake-bergren/classifier/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">load</h1>
+</div>
+
+<div>
+  <div class="description">
+    Load documents from GCS
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<p>Load the data from GCS</p>
+<div class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>training_data <span class="op">=</span> pd.read_excel(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"gs://</span><span class="sc">{</span>PROJECT_BUCKET<span class="sc">}</span><span class="ss">/Last50KCases_withSubjectAndBody.xlsx"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>training_data.loc[:, <span class="st">'email_subject'</span>] <span class="op">=</span> training_data.email_subject.fillna(<span class="st">"N/A"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>training_data[</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    (training_data.email_subject.isna()) <span class="op">|</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    (training_data.email_body.isna())]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">BU</th>
+<th data-quarto-table-cell-role="th">case_number</th>
+<th data-quarto-table-cell-role="th">ACCOUNT_BUSINESS_UNIT__C</th>
+<th data-quarto-table-cell-role="th">received_at</th>
+<th data-quarto-table-cell-role="th">sfdc_category</th>
+<th data-quarto-table-cell-role="th">sfdc_subcategory</th>
+<th data-quarto-table-cell-role="th">predicted_category</th>
+<th data-quarto-table-cell-role="th">predicted_subcategory</th>
+<th data-quarto-table-cell-role="th">record_type</th>
+<th data-quarto-table-cell-role="th">probability</th>
+<th data-quarto-table-cell-role="th">Accuracy_upd</th>
+<th data-quarto-table-cell-role="th">Bin</th>
+<th data-quarto-table-cell-role="th">email_subject</th>
+<th data-quarto-table-cell-role="th">email_body</th>
+</tr>
+</thead>
+<tbody>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>training_data[LABEL_COLUMN].value_counts()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<pre><code>sfdc_category
+Order Processing        23011
+Account/Inquiry         12128
+General Inquiry          5645
+Order Discrepancy        3924
+Returns                  3806
+Product Inquiry          3034
+Billing / Invoice        2262
+Delivery                 1880
+Credits                  1066
+Pricing                   241
+Program / Promotions      240
+Name: count, dtype: int64</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>training_data.iloc[<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<pre><code>BU                                                                        SPD
+case_number                                                           3469839
+ACCOUNT_BUSINESS_UNIT__C                                                  NaN
+received_at                                               2023-09-11T13:22:32
+sfdc_category                                                Order Processing
+sfdc_subcategory                                                  Order Entry
+predicted_category                                           Order Processing
+predicted_subcategory                                                     NaN
+record_type                                                                 2
+probability                                                          0.876806
+Accuracy_upd                                                          Correct
+Bin                                                                         8
+email_subject               PO# 7004014842 || Walgreens Store 16422 || Ohi...
+email_body                  External Email â€“ Please use caution before o...
+Name: 0, dtype: object</code></pre>
+</div>
+</div>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L26" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="get_possible_labels" class="level3">
+<h3 class="anchored" data-anchor-id="get_possible_labels">get_possible_labels</h3>
+<blockquote class="blockquote">
+<pre><code> get_possible_labels ()</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L48" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="training_instance_from_row" class="level3">
+<h3 class="anchored" data-anchor-id="training_instance_from_row">training_instance_from_row</h3>
+<blockquote class="blockquote">
+<pre><code> training_instance_from_row (idx:int, row:pandas.core.series.Series)</code></pre>
+</blockquote>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L32" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="traininginstance" class="level3">
+<h3 class="anchored" data-anchor-id="traininginstance">TrainingInstance</h3>
+<blockquote class="blockquote">
+<pre><code> TrainingInstance (idx:int, label:str, email_subject:str, email_body:str,
+                   metadata:Dict[str,Any])</code></pre>
+</blockquote>
+<p>Usage docs: https://docs.pydantic.dev/2.5/concepts/models/</p>
+<p>A base class for creating Pydantic models.</p>
+<p>Attributes: <strong>class_vars</strong>: The names of classvars defined on the model. <strong>private_attributes</strong>: Metadata about the private attributes of the model. <strong>signature</strong>: The signature for instantiating the model.</p>
+<pre><code>__pydantic_complete__: Whether model building is completed, or if there are still undefined fields.
+__pydantic_core_schema__: The pydantic-core schema used to build the SchemaValidator and SchemaSerializer.
+__pydantic_custom_init__: Whether the model has a custom `__init__` function.
+__pydantic_decorators__: Metadata containing the decorators defined on the model.
+    This replaces `Model.__validators__` and `Model.__root_validators__` from Pydantic V1.
+__pydantic_generic_metadata__: Metadata for generic models; contains data used for a similar purpose to
+    __args__, __origin__, __parameters__ in typing-module generics. May eventually be replaced by these.
+__pydantic_parent_namespace__: Parent namespace of the model, used for automatic rebuilding of models.
+__pydantic_post_init__: The name of the post-init method for the model, if defined.
+__pydantic_root_model__: Whether the model is a `RootModel`.
+__pydantic_serializer__: The pydantic-core SchemaSerializer used to dump instances of the model.
+__pydantic_validator__: The pydantic-core SchemaValidator used to validate instances of the model.
+
+__pydantic_extra__: An instance attribute with the values of extra fields from validation when
+    `model_config['extra'] == 'allow'`.
+__pydantic_fields_set__: An instance attribute with the names of fields explicitly set.
+__pydantic_private__: Instance attribute with the values of private attributes set on the model instance.</code></pre>
+<div class="cell" data-execution_count="187">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>example_training_instance <span class="op">=</span> training_instance_from_row(<span class="dv">0</span>, training_data.iloc[<span class="dv">0</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="get-a-training-and-test-sample-remove-outliers" class="level2">
+<h2 class="anchored" data-anchor-id="get-a-training-and-test-sample-remove-outliers">Get a “training” and “test” sample, remove outliers</h2>
+<section id="outlier-removal" class="level3">
+<h3 class="anchored" data-anchor-id="outlier-removal">Outlier removal</h3>
+<p>We will remove outliers by subject + body length</p>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L68" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="email_small_enough" class="level3">
+<h3 class="anchored" data-anchor-id="email_small_enough">email_small_enough</h3>
+<blockquote class="blockquote">
+<pre><code> email_small_enough (subject:str, body:str, limit:int=7800)</code></pre>
+</blockquote>
+<div class="cell" data-execution_count="96">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>size_mask <span class="op">=</span> training_data.<span class="bu">apply</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">lambda</span> row: email_small_enough(</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>        row.email_subject,</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        row.email_body</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    ), axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="97">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>training_data_included <span class="op">=</span> training_data[size_mask]</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>training_data_included.shape[<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="97">
+<pre><code>56096</code></pre>
+</div>
+</div>
+</section>
+<section id="train-and-test-set" class="level3">
+<h3 class="anchored" data-anchor-id="train-and-test-set">Train and test set</h3>
+<p>We will sample by label. Limit to 5,000 emails total. 90% train, 10% test.</p>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L79" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="get_train_test_idx" class="level3">
+<h3 class="anchored" data-anchor-id="get_train_test_idx">get_train_test_idx</h3>
+<blockquote class="blockquote">
+<pre><code> get_train_test_idx (data:pandas.core.frame.DataFrame,
+                     inclusion_count:int=1000, train_proportion:int=0.9,
+                     label_column:str='sfdc_category',
+                     random_state:int=42)</code></pre>
+</blockquote>
+<div class="cell" data-execution_count="161">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>train, test <span class="op">=</span> get_train_test_idx(training_data_included)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="162">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>train.shape[<span class="dv">0</span>] <span class="op">+</span> test.shape[<span class="dv">0</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="162">
+<pre><code>1000</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="163">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>train[LABEL_COLUMN].value_counts().sort_index(), test[LABEL_COLUMN].value_counts().sort_index()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="163">
+<pre><code>(sfdc_category
+ Account/Inquiry         193
+ Billing / Invoice        35
+ Credits                  14
+ Delivery                 29
+ General Inquiry          87
+ Order Discrepancy        62
+ Order Processing        364
+ Pricing                   4
+ Product Inquiry          48
+ Program / Promotions      4
+ Returns                  60
+ Name: count, dtype: int64,
+ sfdc_category
+ Account/Inquiry      21
+ Billing / Invoice     4
+ Credits               2
+ Delivery              3
+ General Inquiry      10
+ Order Discrepancy     7
+ Order Processing     41
+ Product Inquiry       5
+ Returns               7
+ Name: count, dtype: int64)</code></pre>
+</div>
+</div>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L107" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="write_idx" class="level3">
+<h3 class="anchored" data-anchor-id="write_idx">write_idx</h3>
+<blockquote class="blockquote">
+<pre><code> write_idx (train_idx:pandas.core.indexes.base.Index,
+            test_idx:pandas.core.indexes.base.Index,
+            bucket_name:str='pharma_email_classification',
+            prefix:str='JDB_experiments')</code></pre>
+</blockquote>
+<div class="cell" data-execution_count="165">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>write_idx(</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    train.index,</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    test.index</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L117" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="get_idx" class="level3">
+<h3 class="anchored" data-anchor-id="get_idx">get_idx</h3>
+<blockquote class="blockquote">
+<pre><code> get_idx (bucket_name:str='pharma_email_classification',
+          prefix:str='JDB_experiments')</code></pre>
+</blockquote>
+<div class="cell" data-execution_count="167">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>train_idx, test_idx <span class="op">=</span> get_idx()</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>train_idx.head()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="167">
+<pre><code>0    20775
+1    46774
+2    15159
+3     2756
+4    26009
+Name: 0, dtype: int64</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="168">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>full_idx <span class="op">=</span> pd.concat(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    [train_idx, test_idx],</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    axis<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    ignore_index<span class="op">=</span><span class="va">True</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>training_data_included.loc[full_idx, :].head(<span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="168">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">BU</th>
+<th data-quarto-table-cell-role="th">case_number</th>
+<th data-quarto-table-cell-role="th">ACCOUNT_BUSINESS_UNIT__C</th>
+<th data-quarto-table-cell-role="th">received_at</th>
+<th data-quarto-table-cell-role="th">sfdc_category</th>
+<th data-quarto-table-cell-role="th">sfdc_subcategory</th>
+<th data-quarto-table-cell-role="th">predicted_category</th>
+<th data-quarto-table-cell-role="th">predicted_subcategory</th>
+<th data-quarto-table-cell-role="th">record_type</th>
+<th data-quarto-table-cell-role="th">probability</th>
+<th data-quarto-table-cell-role="th">Accuracy_upd</th>
+<th data-quarto-table-cell-role="th">Bin</th>
+<th data-quarto-table-cell-role="th">email_subject</th>
+<th data-quarto-table-cell-role="th">email_body</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">20775</td>
+<td>PD</td>
+<td>3553288</td>
+<td>a1G4z00000H6C4aEAF</td>
+<td>2023-10-13T12:37:20</td>
+<td>Billing / Invoice</td>
+<td>Billing Statements</td>
+<td>Billing / Invoice</td>
+<td>NaN</td>
+<td>1</td>
+<td>0.474032</td>
+<td>Correct</td>
+<td>4</td>
+<td>Invoices 1 of 1 for 2057199110 , TEXAS INSTITU...</td>
+<td>Dear Valued Customer, Your Cardinal Health in...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">46774</td>
+<td>PD</td>
+<td>3658829</td>
+<td>NaN</td>
+<td>2023-11-29T20:25:47</td>
+<td>Account/Inquiry</td>
+<td>Account updates</td>
+<td>Billing / Invoice</td>
+<td>NaN</td>
+<td>1</td>
+<td>0.566661</td>
+<td>Incorrect</td>
+<td>5</td>
+<td>Invoice status from State of Florida Next Gen</td>
+<td>External Email â€“ Please use caution before o...</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L124" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="get_training_instances" class="level3">
+<h3 class="anchored" data-anchor-id="get_training_instances">get_training_instances</h3>
+<blockquote class="blockquote">
+<pre><code> get_training_instances (bucket_name:str='pharma_email_classification')</code></pre>
+</blockquote>
+<div class="cell" data-execution_count="170">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># max length</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>instance_loader <span class="op">=</span> get_training_instances()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<hr>
+<p><a href="https://github.com/cah-jake-bergren/classifier/blob/main/classifier/load.py#L137" target="_blank" style="float:right; font-size:smaller">source</a></p>
+</section>
+<section id="get_document_batches" class="level3">
+<h3 class="anchored" data-anchor-id="get_document_batches">get_document_batches</h3>
+<blockquote class="blockquote">
+<pre><code> get_document_batches (loader:Iterable[__main__.TrainingInstance],
+                       batch_size:int=32)</code></pre>
+</blockquote>
+<p>Get a batch of documents of size <code>batch_size</code> from a BaseLoader with <code>.lazy_load</code> implemented.</p>
+<div class="cell" data-execution_count="179">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="bu">next</span>(instance_loader)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="179">
+<pre><code>TrainingInstance(idx=15159, label='Order Processing', email_subject='New soliris order', email_body='External Email â€“ Please use caution before opening attachments or clicking links  Hello, Iâ€™d like to place a new order please  Account #2057189687 PO# PIC23100401 Patient: FS Soliris -  300 mg/30ml      CIN:  400-3091 Quantity: 4 Vials NPI:1619288172 TX:10/09/2023        Lena Oâ€™Brien, CPHT Oncology Pharmacy Technician Tri-City Medical Center | Outpatient Infusion Center 3617 Vista Way, Oceanside, CA 92056 P: 442.266.2809 or 442.266.2804 | F: 760.721.8736  [cid:image003.png@01D8952D.AC5BE480]  CONFIDENTIALITY NOTICE  This message and any included attachments are from the Tri-City Healthcare District and are intended only for the addressee.  The information contained in this message is confidential and may constitute non-public information under international, federal, or state securities laws and is intended only for the use of the addressee.  Unauthorized forwarding, printing, copying, distributing, or using such information is strictly prohibited and may be unlawful.  If you are not the addressee, please promptly delete this message and notify the sender of the delivery error by e-mail.         This message has been scanned for malware by Websense. www.websense.com&lt;http://www.websense.com/&gt;', metadata={'BU': 'SPD', 'case_number': 3530234, 'ACCOUNT_BUSINESS_UNIT__C': nan, 'received_at': '2023-10-04T15:34:31', 'sfdc_subcategory': 'Order Entry', 'predicted_category': 'Order Processing', 'predicted_subcategory': nan, 'record_type': 2, 'probability': 0.738666, 'Accuracy_upd': 'Correct', 'Bin': 7})</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="180">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="bu">next</span>(instance_loader)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="180">
+<pre><code>TrainingInstance(idx=2756, label='Account/Inquiry', email_subject='Paid - Invoice 7322186957 - to State of Florida Next Gen (ANID: AN01722330651) - Notification from Ariba Network', email_body='External Email â€“ Please use caution before opening attachments or clicking links   Your customer State of Florida Next Gen updated your invoice on SAP Business Network.  You can view the invoice in your online Outbox (ANID: AN11096391905).  Country  US Customer  State of Florida Next Gen Invoice number  7322186957 Invoice Status  Paid Description:   Header Level Exceptions: Accounting Verification Exception Please accept or edit the accounting information---   If you have any questions, contact your customer.   Download the SAP Business Network Supplier app to your mobile device and manage customer orders on the go.  Ariba, Inc., 3420 Hillview Ave, Bldg3, Palo Alto, CA 94304, USA SAP Business Network Privacy Statement Ariba Data Policy Support If a customer-specific privacy statement applies to this processing of personal data, you can view it when logged into your account.', metadata={'BU': 'PD', 'case_number': 3479534, 'ACCOUNT_BUSINESS_UNIT__C': nan, 'received_at': '2023-09-13T20:53:32', 'sfdc_subcategory': 'Account updates', 'predicted_category': 'Account/Inquiry', 'predicted_subcategory': nan, 'record_type': 1, 'probability': 0.98751974, 'Accuracy_upd': 'Correct', 'Bin': 9})</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="181">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>training_data_included.loc[train_idx, :].head(<span class="dv">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="181">
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">BU</th>
+<th data-quarto-table-cell-role="th">case_number</th>
+<th data-quarto-table-cell-role="th">ACCOUNT_BUSINESS_UNIT__C</th>
+<th data-quarto-table-cell-role="th">received_at</th>
+<th data-quarto-table-cell-role="th">sfdc_category</th>
+<th data-quarto-table-cell-role="th">sfdc_subcategory</th>
+<th data-quarto-table-cell-role="th">predicted_category</th>
+<th data-quarto-table-cell-role="th">predicted_subcategory</th>
+<th data-quarto-table-cell-role="th">record_type</th>
+<th data-quarto-table-cell-role="th">probability</th>
+<th data-quarto-table-cell-role="th">Accuracy_upd</th>
+<th data-quarto-table-cell-role="th">Bin</th>
+<th data-quarto-table-cell-role="th">email_subject</th>
+<th data-quarto-table-cell-role="th">email_body</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">20775</td>
+<td>PD</td>
+<td>3553288</td>
+<td>a1G4z00000H6C4aEAF</td>
+<td>2023-10-13T12:37:20</td>
+<td>Billing / Invoice</td>
+<td>Billing Statements</td>
+<td>Billing / Invoice</td>
+<td>NaN</td>
+<td>1</td>
+<td>0.474032</td>
+<td>Correct</td>
+<td>4</td>
+<td>Invoices 1 of 1 for 2057199110 , TEXAS INSTITU...</td>
+<td>Dear Valued Customer, Your Cardinal Health in...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">46774</td>
+<td>PD</td>
+<td>3658829</td>
+<td>NaN</td>
+<td>2023-11-29T20:25:47</td>
+<td>Account/Inquiry</td>
+<td>Account updates</td>
+<td>Billing / Invoice</td>
+<td>NaN</td>
+<td>1</td>
+<td>0.566661</td>
+<td>Incorrect</td>
+<td>5</td>
+<td>Invoice status from State of Florida Next Gen</td>
+<td>External Email â€“ Please use caution before o...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">15159</td>
+<td>SPD</td>
+<td>3530234</td>
+<td>NaN</td>
+<td>2023-10-04T15:34:31</td>
+<td>Order Processing</td>
+<td>Order Entry</td>
+<td>Order Processing</td>
+<td>NaN</td>
+<td>2</td>
+<td>0.738666</td>
+<td>Correct</td>
+<td>7</td>
+<td>New soliris order</td>
+<td>External Email â€“ Please use caution before o...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">2756</td>
+<td>PD</td>
+<td>3479534</td>
+<td>NaN</td>
+<td>2023-09-13T20:53:32</td>
+<td>Account/Inquiry</td>
+<td>Account updates</td>
+<td>Account/Inquiry</td>
+<td>NaN</td>
+<td>1</td>
+<td>0.987520</td>
+<td>Correct</td>
+<td>9</td>
+<td>Paid - Invoice 7322186957 - to State of Florid...</td>
+<td>External Email â€“ Please use caution before o...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">26009</td>
+<td>SPD</td>
+<td>3575015</td>
+<td>NaN</td>
+<td>2023-10-23T19:21:39</td>
+<td>General Inquiry</td>
+<td>Drop-Ship Issue</td>
+<td>Delivery</td>
+<td>NaN</td>
+<td>2</td>
+<td>0.486582</td>
+<td>Incorrect</td>
+<td>4</td>
+<td>DROPSHIP VYVGART-160644502-TRACKING CENTRAL</td>
+<td>ACCOUNT NUMBER 2150137661 ORDER NUMBER 10543...</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="182">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>large_docs <span class="op">=</span> training_data[<span class="op">~</span>size_mask]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="183">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>large_docs.shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="183">
+<pre><code>(1141, 14)</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="184">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>sample_large_doc <span class="op">=</span> large_docs.iloc[<span class="dv">0</span>]</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>display(<span class="st">"--SUBJECT--</span><span class="ch">\n</span><span class="st">"</span>, sample_large_doc.email_subject)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>display(<span class="st">"--BODY START--</span><span class="ch">\n</span><span class="st">"</span>, sample_large_doc.email_body[:<span class="dv">1500</span>]), <span class="bu">print</span>(<span class="st">"--BODY END--</span><span class="ch">\n</span><span class="st">"</span>, sample_large_doc.email_body[<span class="op">-</span><span class="dv">500</span>:])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre><code>'--SUBJECT--\n'</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>'RE: Drop Ship Invoices'</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>'--BODY START--\n'</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre><code>'Hi, Tara.  Thank you for your patience. I have sent a follow up email last week to the dropship billing team but have not heard back. Usually for Dropship invoices, it does not come the same day the order arrives. It arrives days/weeks (depending on the vendor)  later than the order.  Can you kindly provide the confirmation number/s of the orders?  Let me loop in customer service to assist.  Hi, @Pharma-CustomerService&lt;mailto:Pharma-CustomerService@cardinalhealth.com&gt;.  Kindly assist Tara with her issue. They have not been receiving their invoices for dropship orders  SAP Ship To Name 2052014745 PHOENIXVILLE HOSPITAL CO LLC 2057194735 PHOENIXVILLE HSP SYS PHARM 2150232475 PHOENIXVILLE HSP SYS PHARM  Let me know if you have any questions.  Thank you,   [cid:image002.png@01D9E48E.FD2FFD90]     Winona Fejer Sr. Specialist, Account Operations, Customer Success Pharmaceutical Distribution AcctOpsE@cardinalhealth.com&lt;mailto:AcctOpsE@cardinalhealth.com&gt;     From: May, Tara &lt;TaraM.May@towerhealth.org&gt; Sent: Monday, September 11, 2023 8:49 AM To: GMB-AcctOpsE &lt;AcctOpsE@cardinalhealth.com&gt;; Brannen, Chris &lt;chris.brannen@cardinalhealth.com&gt; Cc: McGrory, Gerald &lt;GeraldE.Mcgrory@towerhealth.org&gt;; Blankenbiller, Kelly &lt;Kelly.Blankenbiller@towerhealth.org&gt; Subject: RE: Drop Ship Invoices           External Email â€“ Please use caution before opening attachments or clicking links  Good Morning,  Is there any word on this yet?  We still are not receiving the invoices for the drop ships in our'</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>--BODY END--
+ __________________________________________  This message is for the designated recipient only and may contain privileged, proprietary or otherwise private information. If you have received it in error, please notify the sender immediately and delete the original. Any other use of the email by you is prohibited.  Dansk - Deutsch - Espanol - Francais - Italiano - Japanese - Nederlands - Norsk - Portuguese - Chinese Svenska: http://www.cardinalhealth.com/en/support/terms-and-conditions-english.html</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="184">
+<pre><code>(None, None)</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="export" class="level2">
+<h2 class="anchored" data-anchor-id="export">Export</h2>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
