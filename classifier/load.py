@@ -22,13 +22,13 @@ from .schema import PROJECT_ID, PROJECT_BUCKET, WRITE_PREFIX
 # %% ../nbs/01_load.ipynb 6
 LABEL_COLUMN = "sfdc_category"
 
-# %% ../nbs/01_load.ipynb 9
+# %% ../nbs/01_load.ipynb 10
 def get_possible_labels() -> List[str]:
     return pd.read_excel(
         f"gs://{PROJECT_BUCKET}/Last50KCases_withSubjectAndBody.xlsx"
         ).sfdc_category.unique().tolist()
 
-# %% ../nbs/01_load.ipynb 10
+# %% ../nbs/01_load.ipynb 11
 class TrainingInstance(BaseModel):
     idx: int
     label: str
@@ -60,7 +60,7 @@ def training_instance_from_row(idx: int, row: pd.Series):
         metadata=metadata
     )
 
-# %% ../nbs/01_load.ipynb 14
+# %% ../nbs/01_load.ipynb 15
 # Our prompt to summarize takes up some amount of prompt space. This is a rough limit
 EMAIL_SIZE_LIMIT = 7800
 
@@ -72,7 +72,7 @@ def email_small_enough(subject: str, body: str, limit: int = EMAIL_SIZE_LIMIT) -
         body = str(body)
     return (len(subject) + len(body)) < limit
 
-# %% ../nbs/01_load.ipynb 18
+# %% ../nbs/01_load.ipynb 19
 INCLUSION_COUNT = 1000
 
 
@@ -99,7 +99,7 @@ def get_train_test_idx(
         stratify=input_data[label_column]
     )
 
-# %% ../nbs/01_load.ipynb 22
+# %% ../nbs/01_load.ipynb 23
 TRAIN_IDX_NAME = "train_idx.csv"
 TEST_IDX_NAME = "test_idx.csv"
 
@@ -113,14 +113,14 @@ def write_idx(
     train_idx.to_series().to_csv(f"gs://{bucket_name}/{prefix}/{TRAIN_IDX_NAME}", index=False)
     test_idx.to_series().to_csv(f"gs://{bucket_name}/{prefix}/{TEST_IDX_NAME}", index=False)
 
-# %% ../nbs/01_load.ipynb 24
+# %% ../nbs/01_load.ipynb 25
 def get_idx(
         bucket_name: str = PROJECT_BUCKET,
         prefix: str = WRITE_PREFIX) -> Tuple[pd.Series, pd.Series]:
     return pd.read_csv(f'gs://{bucket_name}/{prefix}/{TRAIN_IDX_NAME}').iloc[:, 0], \
         pd.read_csv(f'gs://{bucket_name}/{prefix}/{TEST_IDX_NAME}').iloc[:, 0]
 
-# %% ../nbs/01_load.ipynb 27
+# %% ../nbs/01_load.ipynb 28
 def get_training_instances(
         bucket_name: str = PROJECT_BUCKET
 ) -> Iterable[TrainingInstance]:
@@ -133,7 +133,7 @@ def get_training_instances(
     for idx, row in data.iterrows():
         yield training_instance_from_row(idx, row)
 
-# %% ../nbs/01_load.ipynb 29
+# %% ../nbs/01_load.ipynb 30
 def get_document_batches(loader: Iterable[TrainingInstance], batch_size: int = 32) -> Iterable[List[TrainingInstance]]:
     "Get a batch of documents of size `batch_size` from a BaseLoader with `.lazy_load` implemented."
     batch = []
