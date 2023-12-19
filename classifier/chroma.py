@@ -4,7 +4,7 @@
 __all__ = ['merge_summaries_with_instances', 'get_or_make_chroma', 'read_json_lines_from_gcs']
 
 # %% ../nbs/03_chroma.ipynb 2
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Iterable
 from pathlib import Path
 import json
 import pandas as pd
@@ -64,7 +64,7 @@ def get_or_make_chroma(
 # %% ../nbs/03_chroma.ipynb 21
 def read_json_lines_from_gcs(
         blob_name: str,
-        bucket_name: str = PROJECT_BUCKET) -> Any:
+        bucket_name: str = PROJECT_BUCKET) -> Iterable[Any]:
     client = get_storage_client()
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_name)

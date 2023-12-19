@@ -56,7 +56,10 @@ Positions:"""
 
 SPLIT_CHAIN_PROMPT = PromptTemplate.from_template(SPLIT_CHAIN_PROMPT_TEMPLATE)
 
-# %% ../nbs/02_process.ipynb 19
+# %% ../nbs/02_process.ipynb 20
+# TODO: Ignore sender, receiver information
+# TODO: Summarize most recent email, ignore rest
+# TODO: Remove boilerplate
 SUMMARIZE_PROMPT_PREFIX = """You are a customer service representative.
 Summarize the following email, try to preserve as much information as is necessary to diagnose and solve the customers issue detailed in the email.
 Think through your summary step-by-step.
@@ -71,12 +74,12 @@ SUMMARIZE_PROMPT = PromptTemplate.from_template(SUMMARIZE_PROMPT_STR)
 BISON_MAXIMUM_INPUT_TOKENS = 8192
 CONTEXT_TOKEN_LIMIT = BISON_MAXIMUM_INPUT_TOKENS - len(SUMMARIZE_PROMPT_PREFIX)
 
-# %% ../nbs/02_process.ipynb 22
+# %% ../nbs/02_process.ipynb 23
 def prepare_summarization_prompt(document: Document) -> Tuple[Dict[str, str], Dict[str, Any]]:
     prompt = {'prompt': SUMMARIZE_PROMPT.format(context=document.page_content)}
     return prompt, document.metadata
 
-# %% ../nbs/02_process.ipynb 39
+# %% ../nbs/02_process.ipynb 40
 SUMMARIZATION_PROMPT_FILE_NAME = "summarization_prompts.jsonl"
 SUMMARIZATION_METADATA_FILE_NAME = "summarization_metadata.jsonl"
 
@@ -110,7 +113,7 @@ def prepare_batch_summarization_files(
     if use_pbar:
         pbar.close()
 
-# %% ../nbs/02_process.ipynb 42
+# %% ../nbs/02_process.ipynb 43
 SUMMARIZATION_RESULT_PREFIX = "summarization"
 
 
@@ -129,6 +132,6 @@ def summarize_prompts(
         # Optional:
         model_parameters=params)
 
-# %% ../nbs/02_process.ipynb 44
+# %% ../nbs/02_process.ipynb 45
 def load_batch_prediction_results():
     pass

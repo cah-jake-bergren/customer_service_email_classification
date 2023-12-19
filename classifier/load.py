@@ -122,12 +122,13 @@ def get_idx(
 
 # %% ../nbs/01_load.ipynb 28
 def get_training_instances(
-        bucket_name: str = PROJECT_BUCKET
+        bucket_name: str = PROJECT_BUCKET,
+        index_prefix: str = WRITE_PREFIX
 ) -> Iterable[TrainingInstance]:
     data = pd.read_excel(
         f"gs://{bucket_name}/Last50KCases_withSubjectAndBody.xlsx")
     # Load train and test idx
-    train_idx, test_idx = get_idx(bucket_name=bucket_name)
+    train_idx, test_idx = get_idx(bucket_name=bucket_name, prefix=index_prefix)
     full_idx = pd.concat([train_idx, test_idx], axis=0, ignore_index=True)
     data = data.loc[full_idx, :]
     for idx, row in data.iterrows():
