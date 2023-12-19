@@ -2,19 +2,24 @@
 
 # %% auto 0
 __all__ = ['PROJECT_ID', 'PROJECT_BUCKET', 'REGION', 'WRITE_PREFIX', 'DEFAULT_PREDICT_PARAMS', 'ONE_MINUTE', 'get_embedder',
-           'get_storage_client', 'init_vertexai', 'get_model', 'predict', 'batch_predict']
+           'quota_handler', 'get_storage_client', 'init_vertexai', 'get_model', 'predict', 'batch_predict']
 
 # %% ../nbs/00_schema.ipynb 3
 import os
-from typing import Dict
+from typing import Dict, Callable
 from ratelimit import limits, sleep_and_retry
+import time
+from datetime import datetime
+from functools import wraps
 
-import vertexai
+import vertexai as vai
 from vertexai.language_models import TextGenerationModel
 from vertexai.language_models._language_models import MultiCandidateTextGenerationResponse
 from google.cloud.aiplatform import BatchPredictionJob
 from google.cloud import storage
+from google.api_core.exceptions import ResourceExhausted
 
+from langchain.llms import VertexAI
 from langchain.embeddings import VertexAIEmbeddings
 
 # GRPC requires this
@@ -45,6 +50,24 @@ _VERTEX_INITIATED = False
 ONE_MINUTE = 60
 
 
+def quota_handler(func: Callable):
+    @wraps(func)
+    def handle_quota(*args, **kwargs):
+        """Handles GCP ResourceExhausted exceptions. 
+        Will sleep the thread until the next minute before trying again."""
+        try:
+            return func(*args, **kwargs)
+        except ResourceExhausted:
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except ResourceExhausted:
+                    # Sleep until the next minute
+                    sleep_time = 60 - datetime.utcnow().second
+                    time.sleep(sleep_time)
+    return handle_quota
+
+
 def get_storage_client() -> storage.Client:
     return storage.Client(project=PROJECT_ID)
 
@@ -54,7 +77,7 @@ def init_vertexai(
     region: str = REGION):
     global _VERTEX_INITIATED
     if not _VERTEX_INITIATED:
-        vertexai.init(project=project_id, location=region)
+        vai.init(project=project_id, location=region)
         _VERTEX_INITIATED = True
 
 
