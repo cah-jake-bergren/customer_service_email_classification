@@ -2,29 +2,29 @@
 
 # %% auto 0
 __all__ = ['EMAIL_LABEL_SEP', 'LABEL_STR', 'PREDICTION_PROMPT_TEMPLATE', 'PREDICTION_PROMPT', 'filter_examples', 'format_example',
-           'make_prediction_prompt', 'get_predictions', 'write_predictions']
+           'make_prediction_prompt', 'predict_batch', 'get_predictions', 'write_predictions']
 
 # %% ../nbs/04_predict.ipynb 2
 from pathlib import Path
 import json
 from typing import List, Tuple
 import time
-from google.api_core.exceptions import ResourceExhausted
-from ratelimit import sleep_and_retry
 
 import chromadb
 from langchain.schema import Document
 from langchain.prompts import PromptTemplate
 from langchain.vectorstores import Chroma
 from langchain.document_loaders import DataFrameLoader
+from langchain.llms import VertexAI
 
-from .schema import predict, WRITE_PREFIX, PROJECT_BUCKET
-from .load import get_possible_labels, get_training_instances, get_idx, LABEL_COLUMN
+from .schema import predict, quota_handler, WRITE_PREFIX, PROJECT_BUCKET
+from .load import get_possible_labels, get_emails_from_frame, get_idx, LABEL_COLUMN, \
+    get_raw_emails_tejas_case_numbers, get_batches
 from .process import BISON_MAXIMUM_INPUT_TOKENS
-from .chroma import get_or_make_chroma, merge_summaries_with_instances, get_embedder, \
+from .chroma import get_or_make_chroma, get_embedder, \
     read_json_lines_from_gcs
 
-# %% ../nbs/04_predict.ipynb 27
+# %% ../nbs/04_predict.ipynb 28
 EMAIL_LABEL_SEP = "|||"
 
 LABEL_STR = """- Order Processing
@@ -37,13 +37,11 @@ LABEL_STR = """- Order Processing
 - Credits
 - Order Discrepancy
 - Pricing
-- Program / Promotions
-
-"""
+- Program / Promotions"""
 
 PREDICTION_PROMPT_TEMPLATE = """\
 Our customer service team wants to classify emails so they can be sent to the right support team.
-Here are the labels they use.
+Here are the labels they use;
 
 --LABELS--
 """ + LABEL_STR + """
@@ -58,11 +56,11 @@ EMAIL: {email} """ + f"{EMAIL_LABEL_SEP} LABEL: "
 
 PREDICTION_PROMPT = PromptTemplate.from_template(PREDICTION_PROMPT_TEMPLATE)
 
-# %% ../nbs/04_predict.ipynb 29
+# %% ../nbs/04_predict.ipynb 30
 def filter_examples(examples: List[Document], idx: int) -> List[Document]:
     return [e for e in examples if int(e.metadata.get('idx')) != int(idx)]
 
-# %% ../nbs/04_predict.ipynb 33
+# %% ../nbs/04_predict.ipynb 34
 def format_example(example: Document) -> str:
     return f"EMAIL: {example.page_content.strip()} {EMAIL_LABEL_SEP} LABEL: {example.metadata.get('label')}"
 
@@ -103,35 +101,37 @@ def make_prediction_prompt(
             keep_stuffing = False
     return prompt
 
-# %% ../nbs/04_predict.ipynb 41
-def get_predictions(prompts: List[str]) -> List[str]:
+# %% ../nbs/04_predict.ipynb 45
+@quota_handler
+def predict_batch(llm: VertexAI, prompts: List[str]) -> List[str]:
+    return llm.batch(prompts)
+
+
+def get_predictions(llm: VertexAI, prompts: List[str]) -> List[str]:
+    pbar = tqdm(total=len(prompts), ncols=80, leave=False)
     predictions = []
-    for p in tqdm(prompts, ncols=80, leave=False):
-        sleep_time = 1
-        try:
-            p_prediction = predict(p)
-        except ResourceExhausted:
-            while True:
-                try:
-                    p_prediction = predict(p)
-                    break
-                except ResourceExhausted:
-                    time.sleep(sleep_time)
-                    sleep_time = sleep_time * 2
-        predictions.append(p_prediction.text.strip())
+    for batch in get_batches(iter(prompts), 5):
+        batch_predictions = predict_batch(llm, batch)
+        predictions.extend(batch_predictions)
+        pbar.update(len(batch))
+    pbar.close()
     return predictions
 
-# %% ../nbs/04_predict.ipynb 49
+# %% ../nbs/04_predict.ipynb 53
 def write_predictions(
         predictions: List[str],
         labels: List[str],
         idx: List[str],
+        prompts: List[str],
+        emails: List[str],
         directory: Path,
         file_name: str = "predictions.csv"):
     pd.DataFrame(
         list(zip(
             predictions, 
             labels,
-            idx)),
-        columns=['pred', 'label', 'idx']
+            idx,
+            prompts,
+            emails)),
+        columns=['prediction', 'label', 'idx', 'prompt', 'email']
     ).to_csv(directory / file_name, index=False)

@@ -109,7 +109,7 @@ SUMMARIZATION_METADATA_FILE_NAME = "summarization_metadata.jsonl"
 
 
 def prepare_batch_summarization_files(
-        loader: Iterable[TrainingInstance],
+        loader: Iterable[Email],
         bucket_name: str = PROJECT_BUCKET,
         use_pbar: bool = False,
         pbar_size: int = 10000,
@@ -125,7 +125,7 @@ def prepare_batch_summarization_files(
     with metadata_blob.open("w") as metadata_f:
         with prompt_blob.open("w") as prompt_f:
             for instance in loader:
-                document = make_document_from_instance(instance)
+                document = email_to_document(instance)
                 prompt, metadata = prepare_summarization_prompt(document)
                 # Write prompt to JSONL file in GCS, write metadat to similar file
                 json.dump(prompt, prompt_f)
