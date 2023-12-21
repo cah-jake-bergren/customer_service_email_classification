@@ -8,32 +8,38 @@ __all__ = ['TEJAS_PREFIX', 'TRAIN_PROMPT_TEMPLATE', 'TRAIN_PROMPT', 'TEST_PROMPT
 # %% ../../nbs/experiments/07_split_processing.ipynb 2
 from typing import Dict, List
 from pathlib import Path
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
-from ..schema import get_embedder, get_model, quota_handler, WRITE_PREFIX
-from ..load import Email, get_batches, get_idx, get_emails_from_frame, \
-    get_raw_emails_tejas_case_numbers, get_possible_labels
+from sklearn import metrics
 
 from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import RunnableSequence
 from langchain.llms import VertexAI
+from langchain.vectorstores import Chroma
+from langchain.document_loaders import DataFrameLoader
+
+from ..schema import get_embedder, get_model, quota_handler, WRITE_PREFIX
+from ..load import Email, get_batches, get_idx, get_emails_from_frame, \
+    get_raw_emails_tejas_case_numbers, get_possible_labels, PROJECT_BUCKET
+from ..chroma import get_or_make_chroma
+from ..predict import make_prediction_prompt, get_predictions, write_predictions
 
 # %% ../../nbs/experiments/07_split_processing.ipynb 5
 TEJAS_PREFIX = f"{WRITE_PREFIX}/tejas"
 
-# %% ../../nbs/experiments/07_split_processing.ipynb 15
+# %% ../../nbs/experiments/07_split_processing.ipynb 14
 def make_description_from_row(row: pd.Series) -> str:
     if row.dropna().shape[0] == 0:
         return ""
     return "Issues including:\n" + "\n".join(["- " + v.strip() for v in row.dropna().values])
 
-# %% ../../nbs/experiments/07_split_processing.ipynb 19
+# %% ../../nbs/experiments/07_split_processing.ipynb 18
 TRAIN_PROMPT_TEMPLATE = """Here is an email chain sent to customer service \
 and how customer service labeled it for handling, including a description of the label. 
 Summarize the email and explain why the email was labeled the way it was.
 Do not include any boilerplate content in your summary.
-Only use information present in the email.
+Only use information present in the email chain.
 Think through your explanation step-by-step.
 -- EMAIL --
 {email}
@@ -46,7 +52,7 @@ Think through your explanation step-by-step.
 
 TRAIN_PROMPT = PromptTemplate.from_template(TRAIN_PROMPT_TEMPLATE)
 
-# %% ../../nbs/experiments/07_split_processing.ipynb 22
+# %% ../../nbs/experiments/07_split_processing.ipynb 21
 def format_email_for_train_summary(
         email: Email,
         descriptions: Dict[str, str]
@@ -57,7 +63,7 @@ def format_email_for_train_summary(
         'label_description': descriptions.get(email.label)
     }
 
-# %% ../../nbs/experiments/07_split_processing.ipynb 27
+# %% ../../nbs/experiments/07_split_processing.ipynb 26
 TEST_PROMPT_TEMPLATE = """Here is an email sent to our customer service department.
 Summarize it, identifying points of action for customer service if there are any.
 Do not include any names, company names, addresses or other identifying information.
@@ -71,7 +77,7 @@ Remove boilerplate.
 
 TEST_PROMPT = PromptTemplate.from_template(TEST_PROMPT_TEMPLATE)
 
-# %% ../../nbs/experiments/07_split_processing.ipynb 28
+# %% ../../nbs/experiments/07_split_processing.ipynb 27
 def format_email_for_test_summary(
         email: Email,
         ) -> Dict[str, str]:
@@ -80,7 +86,7 @@ def format_email_for_test_summary(
         'body': email.email_body,
     }
 
-# %% ../../nbs/experiments/07_split_processing.ipynb 33
+# %% ../../nbs/experiments/07_split_processing.ipynb 32
 @quota_handler
 def batch_predict(prompts: List[Dict[str, str]], chain: RunnableSequence) -> List[str]:
     return chain.batch(prompts)

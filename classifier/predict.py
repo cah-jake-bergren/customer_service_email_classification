@@ -9,6 +9,8 @@ from pathlib import Path
 import json
 from typing import List, Tuple
 import time
+from tqdm import tqdm
+import pandas as pd
 
 import chromadb
 from langchain.schema import Document
@@ -24,7 +26,7 @@ from .process import BISON_MAXIMUM_INPUT_TOKENS
 from .chroma import get_or_make_chroma, get_embedder, \
     read_json_lines_from_gcs
 
-# %% ../nbs/04_predict.ipynb 28
+# %% ../nbs/04_predict.ipynb 27
 EMAIL_LABEL_SEP = "|||"
 
 LABEL_STR = """- Order Processing
@@ -56,11 +58,11 @@ EMAIL: {email} """ + f"{EMAIL_LABEL_SEP} LABEL: "
 
 PREDICTION_PROMPT = PromptTemplate.from_template(PREDICTION_PROMPT_TEMPLATE)
 
-# %% ../nbs/04_predict.ipynb 30
+# %% ../nbs/04_predict.ipynb 29
 def filter_examples(examples: List[Document], idx: int) -> List[Document]:
     return [e for e in examples if int(e.metadata.get('idx')) != int(idx)]
 
-# %% ../nbs/04_predict.ipynb 34
+# %% ../nbs/04_predict.ipynb 33
 def format_example(example: Document) -> str:
     return f"EMAIL: {example.page_content.strip()} {EMAIL_LABEL_SEP} LABEL: {example.metadata.get('label')}"
 
@@ -101,7 +103,7 @@ def make_prediction_prompt(
             keep_stuffing = False
     return prompt
 
-# %% ../nbs/04_predict.ipynb 45
+# %% ../nbs/04_predict.ipynb 44
 @quota_handler
 def predict_batch(llm: VertexAI, prompts: List[str]) -> List[str]:
     return llm.batch(prompts)
@@ -117,7 +119,7 @@ def get_predictions(llm: VertexAI, prompts: List[str]) -> List[str]:
     pbar.close()
     return predictions
 
-# %% ../nbs/04_predict.ipynb 53
+# %% ../nbs/04_predict.ipynb 52
 def write_predictions(
         predictions: List[str],
         labels: List[str],
