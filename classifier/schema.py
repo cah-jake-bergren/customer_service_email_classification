@@ -2,11 +2,12 @@
 
 # %% auto 0
 __all__ = ['PROJECT_ID', 'PROJECT_BUCKET', 'REGION', 'WRITE_PREFIX', 'DEFAULT_PREDICT_PARAMS', 'ONE_MINUTE', 'get_embedder',
-           'quota_handler', 'get_storage_client', 'init_vertexai', 'get_model', 'predict', 'batch_predict']
+           'seconds_to_next_minute', 'batch_embed_documents', 'quota_handler', 'get_storage_client', 'init_vertexai',
+           'get_model', 'predict', 'batch_predict']
 
 # %% ../nbs/00_schema.ipynb 3
 import os
-from typing import Dict, Callable
+from typing import Dict, Callable, List
 from ratelimit import limits, sleep_and_retry
 import time
 from datetime import datetime
@@ -37,7 +38,28 @@ def get_embedder() -> VertexAIEmbeddings:
         model_name='textembedding-gecko'
     )
 
-# %% ../nbs/00_schema.ipynb 7
+# %% ../nbs/00_schema.ipynb 6
+def seconds_to_next_minute() -> int:
+    sleep_time = 60 - datetime.utcnow().second
+    return sleep_time
+
+
+def batch_embed_documents(
+        embedder: VertexAIEmbeddings, 
+        texts: List[str], 
+        retries: int = 5) -> List[str]:
+    retry_counter = 0
+    while True:
+        try:
+            embeddings = embedder.embed_documents(texts)
+            return embeddings
+        except Exception as e:
+            time.sleep(seconds_to_next_minute())
+        retry_counter += 1
+        if retry_counter >= retries:
+            raise e
+
+# %% ../nbs/00_schema.ipynb 8
 WRITE_PREFIX = "JDB_experiments"
 
 DEFAULT_PREDICT_PARAMS = {
