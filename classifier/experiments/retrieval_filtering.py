@@ -2,10 +2,11 @@
 
 # %% auto 0
 __all__ = ['EXPERIMENT_PREFIX', 'EXPERIMENT_WRITE_PREFIX', 'TOP_3_PROMPT_TEMPLATE', 'TOP_3_PROMPT', 'PREDICTION_TEMPLATE',
-           'PREDICTION_PROMPT', 'get_label_filtered_documents']
+           'PREDICTION_PROMPT', 'make_categories_str', 'get_llm', 'get_top_3_chain', 'get_label_filtered_documents',
+           'get_prediction_chain', 'format_filtered_examples', 'invoke_chain', 'get_summary_prediction']
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 2
-from typing import Dict, List
+from typing import Dict, List, Any
 from pathlib import Path
 import os
 
@@ -22,7 +23,7 @@ from langchain.vectorstores import Chroma
 from langchain.document_loaders import DataFrameLoader
 from langchain.output_parsers import CommaSeparatedListOutputParser
 
-from ..schema import WRITE_PREFIX, PROJECT_BUCKET
+from ..schema import WRITE_PREFIX, PROJECT_BUCKET, quota_handler
 from ..load import Email, get_batches, get_emails_from_frame, \
     get_raw_emails, email_small_enough
 from ..chroma import get_or_make_chroma
@@ -39,6 +40,18 @@ EXPERIMENT_PREFIX = "retrieval_filtering"
 EXPERIMENT_WRITE_PREFIX = WRITE_PREFIX + "/" + EXPERIMENT_PREFIX
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 40
+def make_categories_str(
+        category_descriptions: Dict[str, str], 
+        ignore: List[str] = [], 
+        include: List[str] = []) -> str:
+    if len(include) == 0:
+        include = list(category_descriptions.keys())
+    return "\n".join(
+        [f"||{c}||\n{d.lower().strip()}" for c, d in category_descriptions.items() \
+            if (c not in ignore) and (c in include)]
+    )
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 42
 TOP_3_PROMPT_TEMPLATE = """Below is a summary of an email sent to our customer service department. 
 Here is a list of categories and their descriptions we would like to label this email with. 
 Of the options in this list, choose your 3 likeliest labels for the following email. 
@@ -52,7 +65,21 @@ Only return the categories you choose as a comma-separated list, not their descr
 
 TOP_3_PROMPT = PromptTemplate.from_template(TOP_3_PROMPT_TEMPLATE)
 
-# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 46
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 43
+_LLM = None
+
+
+def get_llm() -> VertexAI:
+    global _LLM
+    if _LLM is None:
+        _LLM = VertexAI()
+    return _LLM
+
+
+def get_top_3_chain() -> RunnableSequence:
+    return TOP_3_PROMPT | get_llm() | CommaSeparatedListOutputParser()
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 49
 def get_label_filtered_documents(
         query: str,
         labels: List[str],
@@ -69,13 +96,15 @@ def get_label_filtered_documents(
         documents[l] = label_documents
     return documents
 
-# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 49
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 52
 PREDICTION_TEMPLATE = """Below is a summary of an email sent to our customer service department.
 We believe the email to belong to one of the following categories;
 {categories}
 
 Here are some similar examples for each category.
-Compare and contract the examples to the email and decide which of the categories it belongs to.
+Compare and contrast the examples to the email and decide which of the categories it belongs to.
+Return only the category that best describes the email. 
+
 -- EXAMPLES --
 {examples}
 
@@ -86,3 +115,58 @@ Compare and contract the examples to the email and decide which of the categorie
 """
 
 PREDICTION_PROMPT = PromptTemplate.from_template(PREDICTION_TEMPLATE)
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 53
+def get_prediction_chain() -> RunnableSequence:
+    return PREDICTION_PROMPT | get_llm()
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 55
+def format_filtered_examples(examples: Dict[str, List[Document]]) -> str:
+    result = ""
+    for cat, docs in examples.items():
+        cat_header = f"||{cat}|| examples;"
+        document_content = "\n".join(
+            [
+                f"Summary: {d.page_content}\nLabel: {d.metadata.get('label')}\n" for d in docs
+            ])
+        result = result + cat_header + document_content
+    return result
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 57
+@quota_handler
+def invoke_chain(chain: RunnableSequence, *args, **kwargs) -> Any:
+    return chain.invoke(*args, **kwargs)
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 58
+def get_summary_prediction(
+        summary: str, 
+        chroma: Chroma, 
+        step_1_chain: RunnableSequence,
+        step_2_chain: RunnableSequence,
+        descriptions: Dict[str, str]) -> str:
+    if summary is None:
+        return None
+    categories_str = make_categories_str(descriptions)
+    # Make a prediction for an input summary
+    step_1_answer = invoke_chain(
+        step_1_chain, 
+        {
+            'categories': categories_str,
+            'email': summary
+        })
+    # Get similar documents for each likely category
+    similar_documents = get_label_filtered_documents(
+        query=summary,
+        labels=step_1_answer,
+        chroma=chroma
+    )
+    step_2_answer = invoke_chain(
+        step_2_chain,
+        {
+            'categories': make_categories_str(
+                descriptions, 
+                include=step_1_answer),
+            'examples': format_filtered_examples(similar_documents),
+            'email': summary
+        })
+    return step_2_answer.strip()
