@@ -98,12 +98,15 @@ def get_label_filtered_documents(
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 52
 PREDICTION_TEMPLATE = """Below is a summary of an email sent to our customer service department.
-We believe the email to belong to one of the following categories;
-{categories}
+We believe the email to belong to one of categories in the -- CATEGORIES -- list.
 
-Here are some similar examples for each category.
-Compare and contrast the examples to the email and decide which of the categories it belongs to.
-Return only the category that best describes the email. 
+We are also providing you with similar examples for each category.
+Compare and contrast the examples to the email.
+Return the category that best describes the email.
+Your answer must be an option in the -- CATEGORIES -- section.
+
+-- CATEGORIES --
+{categories}
 
 -- EXAMPLES --
 {examples}
