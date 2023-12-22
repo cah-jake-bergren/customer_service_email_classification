@@ -7,16 +7,14 @@ documentation.
 
 ## Install
 
+Clone this repo, navigate to the project directory, then
+
 ``` sh
-pip install customer_service_email_classification
+pip install .
 ```
 
-## How to use
+For developers;
 
-Fill me in please! Don’t forget code examples:
-
-``` python
-1+1
+``` sh
+pip install -e '.[dev]'
 ```
-
-    2
