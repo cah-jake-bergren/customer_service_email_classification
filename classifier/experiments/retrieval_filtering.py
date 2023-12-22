@@ -2,13 +2,15 @@
 
 # %% auto 0
 __all__ = ['EXPERIMENT_PREFIX', 'EXPERIMENT_WRITE_PREFIX', 'TOP_3_PROMPT_TEMPLATE', 'TOP_3_PROMPT', 'PREDICTION_TEMPLATE',
-           'PREDICTION_PROMPT', 'make_categories_str', 'get_llm', 'get_top_3_chain', 'get_label_filtered_documents',
-           'get_prediction_chain', 'format_filtered_examples', 'invoke_chain', 'get_summary_prediction']
+           'PREDICTION_PROMPT', 'FINAL_REGEX', 'make_categories_str', 'get_llm', 'format_category_answer', 'fix_string',
+           'get_top_3_chain', 'get_label_filtered_documents', 'get_prediction_chain', 'format_filtered_examples',
+           'format_final_category_string', 'invoke_chain', 'get_summary_prediction']
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 2
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 from pathlib import Path
 import os
+import re
 
 import numpy as np
 import pandas as pd
@@ -21,7 +23,7 @@ from langchain.schema.runnable import RunnableSequence
 from langchain.llms import VertexAI
 from langchain.vectorstores import Chroma
 from langchain.document_loaders import DataFrameLoader
-from langchain.output_parsers import CommaSeparatedListOutputParser
+from langchain.output_parsers import CommaSeparatedListOutputParser, RegexParser
 
 from ..schema import WRITE_PREFIX, PROJECT_BUCKET, quota_handler
 from ..load import Email, get_batches, get_emails_from_frame, \
@@ -47,19 +49,27 @@ def make_categories_str(
     if len(include) == 0:
         include = list(category_descriptions.keys())
     return "\n".join(
-        [f"||{c}||\n{d.lower().strip()}" for c, d in category_descriptions.items() \
+        [f"- {c}" for c, d in category_descriptions.items() \
             if (c not in ignore) and (c in include)]
     )
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 42
 TOP_3_PROMPT_TEMPLATE = """Below is a summary of an email sent to our customer service department. 
-Here is a list of categories and their descriptions we would like to label this email with. 
-Of the options in this list, choose your 3 likeliest labels for the following email. 
-Only return the categories you choose as a comma-separated list, not their descriptions (the labels surrounded by '||').
--- CATEGORIES --
-{categories}
+
 -- EMAIL --
 {email}
+-- END EMAIL --
+
+Here is a list of categories we assign to emails;
+
+-- CATEGORIES --
+{categories}
+-- END CATEGORIES --
+
+Of the options in the above list, choose the 3 likeliest that describe the following email. 
+Only return the categories you choose.
+Your response should be a list of comma separated values.
+
 -- TOP 3 LIKELIEST LABELS --
 """
 
@@ -76,8 +86,16 @@ def get_llm() -> VertexAI:
     return _LLM
 
 
+def format_category_answer(answer: List[str]):
+    return [s.replace("||","") for s in answer]
+
+
+def fix_string(string: str) -> str:
+    return string.replace("[", "").replace("]","")
+
+
 def get_top_3_chain() -> RunnableSequence:
-    return TOP_3_PROMPT | get_llm() | CommaSeparatedListOutputParser()
+    return TOP_3_PROMPT | get_llm() | fix_string | CommaSeparatedListOutputParser() | format_category_answer
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 49
 def get_label_filtered_documents(
@@ -97,33 +115,46 @@ def get_label_filtered_documents(
     return documents
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 52
+# categories is a list like;
+# 0. CATEGORY
+# 1. CATEGORY 2
+# 2. CATEGORY 3
 PREDICTION_TEMPLATE = """Below is a summary of an email sent to our customer service department.
-We believe the email to belong to one of categories in the -- CATEGORIES -- list.
-
-We are also providing you with similar examples for each category.
-Compare and contrast the examples to the email.
-Return the category that best describes the email.
-Your answer must be an option in the -- CATEGORIES -- section.
-
--- CATEGORIES --
-{categories}
-
--- EXAMPLES --
-{examples}
+It is your job to decide which category the email belongs to.
 
 -- EMAIL --
 {email}
+-- END EMAIL --
 
--- CATEGORY --
-"""
+Choose which of the following categories the email above belongs to;
+
+-- CATEGORIES --
+{categories}
+-- END CATEGORIES --
+
+Here are some similar emails and how they were labeled to help you decide.
+
+-- EXAMPLES --
+{examples}
+-- END EXAMPLES --
+
+Return only the number of the category you have picked.
+
+Category Number: """
 
 PREDICTION_PROMPT = PromptTemplate.from_template(PREDICTION_TEMPLATE)
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 53
-def get_prediction_chain() -> RunnableSequence:
-    return PREDICTION_PROMPT | get_llm()
+FINAL_REGEX = "(\d+)(?!.*\d)"
 
-# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 55
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 54
+def get_prediction_chain() -> RunnableSequence:
+    return PREDICTION_PROMPT | get_llm() | RegexParser(
+        regex=FINAL_REGEX, 
+        output_keys=['result'], 
+        default_output_key='result')
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 56
 def format_filtered_examples(examples: Dict[str, List[Document]]) -> str:
     result = ""
     for cat, docs in examples.items():
@@ -136,19 +167,27 @@ def format_filtered_examples(examples: Dict[str, List[Document]]) -> str:
     return result
 
 # %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 57
+def format_final_category_string(categories: List[str]) -> str:
+    return "\n".join([f'{i}. {cat}' for i, cat in enumerate(categories)])
+
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 59
 @quota_handler
 def invoke_chain(chain: RunnableSequence, *args, **kwargs) -> Any:
     return chain.invoke(*args, **kwargs)
 
-# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 58
+# %% ../../nbs/experiments/10_10k_retrieval_filtering.ipynb 60
 def get_summary_prediction(
         summary: str, 
         chroma: Chroma, 
         step_1_chain: RunnableSequence,
         step_2_chain: RunnableSequence,
-        descriptions: Dict[str, str]) -> str:
+        descriptions: Dict[str, str]) -> Tuple[List[str], List[Document], int, str]:
+    step_1_answer = None
+    similar_documents = None
+    step_1_answer_position = None
+    final_answer = None
     if summary is None:
-        return None
+        return step_1_answer, similar_documents, step_1_answer_position, final_answer
     categories_str = make_categories_str(descriptions)
     # Make a prediction for an input summary
     step_1_answer = invoke_chain(
@@ -157,6 +196,10 @@ def get_summary_prediction(
             'categories': categories_str,
             'email': summary
         })
+    # I've run out of time to tinker with this. If it ain't right, ignore it.
+    # TODO: Fix step one prompt / chain to handle outlier inference cases that aren't formatted right.
+    if len(step_1_answer) != 3:
+        return step_1_answer, similar_documents, step_1_answer_position, final_answer
     # Get similar documents for each likely category
     similar_documents = get_label_filtered_documents(
         query=summary,
@@ -166,10 +209,17 @@ def get_summary_prediction(
     step_2_answer = invoke_chain(
         step_2_chain,
         {
-            'categories': make_categories_str(
-                descriptions, 
-                include=step_1_answer),
+            'categories': format_final_category_string(step_1_answer),
             'examples': format_filtered_examples(similar_documents),
             'email': summary
         })
-    return step_2_answer.strip()
+    step_1_answer_position = int(step_2_answer.get('result'))
+    if step_1_answer_position > len(step_1_answer):
+        return step_1_answer, similar_documents, step_1_answer_position, final_answer
+    try:
+        final_answer = step_1_answer[step_1_answer_position].strip()
+    except IndexError as e:
+        print("Position was ", step_1_answer_position)
+        print("List was ", step_1_answer)
+        raise e
+    return step_1_answer, similar_documents, step_1_answer_position, final_answer
